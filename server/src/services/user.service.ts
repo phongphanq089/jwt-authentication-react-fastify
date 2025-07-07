@@ -1,0 +1,392 @@
+import { ENV_CONFIG } from '@/config/envConfig'
+import { INFOMAITON } from '@/contants/infomation'
+import { BrevoEmailProvider } from '@/provider/brevoEmailProvider'
+import {
+  ForgotPasswordType,
+  ResenVerifyType,
+  ResenVerifyUpdatePasswordType,
+  UpdatePasswordType,
+  UserLoginSchemaType,
+  UserRegisterSchemaType,
+  VerifyAccountSchemaType,
+} from '@/schemas/user.schema'
+
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from '@/utils/errors'
+import { v4 as uuidv4 } from 'uuid'
+import bcrypt from 'bcrypt'
+import { UserModel } from '@/models/users.model'
+import { jwtProvider } from '@/provider/jwtProvider'
+import { pickUser } from '@/utils/pickUser'
+import { expiresAtToken } from '@/utils/utils'
+
+export class UserService {
+  /**
+   * @REGISTER
+   * @SCHEMA userRegisterSchemaType
+   * @returns
+   */
+  static async register(
+    userData: UserRegisterSchemaType
+  ): Promise<UserRegisterSchemaType> {
+    const { username, email, password, urlRedirect } = userData
+
+    const existingUser = await UserModel.findByEmailOrUsername(email, username)
+    if (existingUser) {
+      const isEmailConflict = existingUser.email === email
+      const isUsernameConflict = existingUser.username === username
+      let message =
+        isEmailConflict && isUsernameConflict
+          ? 'Email and username already exist'
+          : isEmailConflict
+          ? 'Email already exists'
+          : 'Username already exists'
+      throw new ConflictError(message)
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      password,
+      +ENV_CONFIG.BCRYPT_ROUNDS || 12
+    )
+
+    const user: Omit<UserRegisterSchemaType, '_id'> = {
+      username,
+      email,
+      password: hashedPassword,
+      role: 'client',
+      avatar: null,
+      isActive: false,
+      metadata: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      verify_token: uuidv4(),
+      verify_token_expired_at: expiresAtToken,
+      forgot_password_token: null,
+      forgot_password_token_expired_at: null,
+      urlRedirect: urlRedirect,
+    }
+
+    const newUser = await UserModel.insert(user)
+
+    await BrevoEmailProvider.sendMail(
+      newUser.email,
+      'Verify your email',
+      {
+        logoUrl: INFOMAITON.LOGO_TEMPLATE_HTML_EMAIL,
+        name: INFOMAITON.USER_DEFAULT_NAME,
+        companyName: INFOMAITON.DEFAULT_NAME_PROJECT,
+        verifyLink: `${urlRedirect}/auth/verify-email?email=${user.email}&token=${newUser.verify_token}`,
+        year: `${new Date().getFullYear()}`,
+      },
+      'src/templates/template-mail.html'
+    )
+
+    return newUser
+  }
+  /**
+   * @LOGIN
+   * @SCHEMA UserLoginSchemaType
+   * @returns
+   */
+  static async login(userData: UserLoginSchemaType): Promise<{
+    accessToken: string
+    refreshToken: string
+  }> {
+    const { email } = userData
+    const existUser = await UserModel.checkExitEmail(email)
+
+    if (!existUser) {
+      throw new NotFoundError('Account not found')
+    }
+
+    if (!existUser.isActive) {
+      throw new ForbiddenError('Your account is not verified')
+    }
+
+    if (!bcrypt.compareSync(userData.password, existUser.password)) {
+      throw new UnauthorizedError('Your email or password is incorrect !')
+    }
+    const userInfo = { _id: existUser._id, email: existUser.email }
+
+    const accessToken = await jwtProvider.generateToken({
+      payload: userInfo,
+      options: {
+        expiresIn: ENV_CONFIG.ACCESS_TOKEN_LIFE,
+      },
+      secretOrPrivateKey: ENV_CONFIG.ACCESS_TOKEN_SECRET_SIGNATURE,
+    })
+
+    const refreshToken = await jwtProvider.generateToken({
+      payload: userInfo,
+      options: {
+        expiresIn: ENV_CONFIG.REFRESH_TOKEN_LIFE,
+      },
+      secretOrPrivateKey: ENV_CONFIG.REFRESH_TOKEN_SECRET_SIGNATURE,
+    })
+
+    await UserModel.createRefreshToken(refreshToken, existUser._id as string)
+
+    const result = {
+      accessToken,
+      refreshToken,
+      ...pickUser(existUser),
+    }
+    return result
+  }
+  /**
+   * @VERIFY_ACCOUNT
+   * @SCHEMA VerifyAccountSchemaType
+   * @returns
+   */
+  static async verifyAccount(userData: VerifyAccountSchemaType) {
+    const existUser = await UserModel.checkExitEmail(userData.email)
+    if (!existUser) {
+      throw new NotFoundError('Account not found')
+    }
+
+    if (existUser.isActive) {
+      throw new ForbiddenError('Your account is already active!')
+    }
+
+    if (userData.token !== existUser.verify_token) {
+      throw new ForbiddenError('Token is invalid!')
+    }
+
+    if (
+      !existUser.verify_token_expired_at ||
+      existUser.verify_token_expired_at < Date.now()
+    ) {
+      throw new ForbiddenError('Token has expired!')
+    }
+
+    const newResult = await UserModel.updateUserVerifyStatus(
+      existUser._id as string,
+      {
+        isActive: true,
+        verify_token: null,
+        verify_token_expired_at: null,
+      }
+    )
+
+    return pickUser(newResult)
+  }
+  /**
+   * @RESEND_VERIFY_CODE
+   * @SCHEMA ResenVerifyType
+   * @returns
+   */
+  static async resendVerifyCode(resBody: ResenVerifyType) {
+    const existUser = await UserModel.checkExitEmail(resBody.email)
+    if (!existUser) {
+      throw new NotFoundError('Account not found')
+    }
+
+    if (existUser.isActive) {
+      throw new ForbiddenError('Your account is already active!')
+    }
+
+    const newVerifyToken = uuidv4()
+    const newVerifyTokenExpiredAt = expiresAtToken
+
+    const updatedUser = await UserModel.updateUserVerifyStatus(
+      existUser._id as string,
+      {
+        verify_token: newVerifyToken,
+        verify_token_expired_at: newVerifyTokenExpiredAt,
+      }
+    )
+
+    await BrevoEmailProvider.sendMail(
+      resBody.email,
+      'Verify your email',
+      {
+        logoUrl: INFOMAITON.LOGO_TEMPLATE_HTML_EMAIL,
+        name: INFOMAITON.USER_DEFAULT_NAME,
+        companyName: INFOMAITON.DEFAULT_NAME_PROJECT,
+        verifyLink: `${resBody.urlRedirect}/auth/verify-email?email=${resBody.email}&token=${updatedUser?.verify_token}`,
+        year: `${new Date().getFullYear()}`,
+      },
+      'src/templates/template-mail.html'
+    )
+
+    return {
+      message: 'Verification email has been resent.',
+    }
+  }
+
+  /**
+   * @FORGOT_PASSWORD
+   * @SCHEMA ForgotPasswordType
+   * @returns
+   */
+  static async forgotPassword(resBody: ForgotPasswordType) {
+    const existUser = await UserModel.checkExitEmail(resBody.email)
+    if (!existUser) {
+      throw new NotFoundError('Account not found')
+    }
+
+    const VerifyToken = uuidv4()
+
+    const updatedUser = await UserModel.updateUserForgotPassword(
+      existUser._id as string,
+      {
+        forgot_password_token: VerifyToken,
+        forgot_password_token_expired_at: expiresAtToken,
+      }
+    )
+
+    const resetLink = `${resBody.urlRedirect}/auth/reset-password?email=${updatedUser?.email}&token=${VerifyToken}`
+
+    if (!updatedUser?.email) {
+      throw new Error(
+        'User email is missing when sending reset password email.'
+      )
+    }
+
+    await BrevoEmailProvider.sendMail(
+      updatedUser.email,
+      'Reset your password',
+      {
+        logoUrl: INFOMAITON.LOGO_TEMPLATE_HTML_EMAIL,
+        name: INFOMAITON.USER_DEFAULT_NAME,
+        companyName: INFOMAITON.DEFAULT_NAME_PROJECT,
+        verifyLink: resetLink,
+        year: `${new Date().getFullYear()}`,
+      },
+      'src/templates/forgot-password.html'
+    )
+
+    return {
+      message: `Reset password email has been sent to ${resBody.email} .`,
+    }
+  }
+  /**
+   * @UPDATE_PASSWORD
+   * @SCHEMA VerifyUpdatePasswordType
+   * @returns
+   */
+  static async updatePassword(resBody: UpdatePasswordType) {
+    const existUser = await UserModel.checkExitEmail(resBody.email)
+    if (!existUser) {
+      throw new NotFoundError('Account not found')
+    }
+
+    if (resBody.token !== existUser.forgot_password_token) {
+      throw new ForbiddenError('Token is invalid!')
+    }
+
+    if (
+      !existUser.forgot_password_token_expired_at ||
+      existUser.forgot_password_token_expired_at < Date.now()
+    ) {
+      throw new ForbiddenError('Token has expired!')
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      resBody.password,
+      +ENV_CONFIG.BCRYPT_ROUNDS || 12
+    )
+
+    await UserModel.updateUserForgotPassword(existUser._id as string, {
+      password: hashedPassword,
+      forgot_password_token: null,
+    })
+
+    return {
+      message: 'Update password success',
+    }
+  }
+  /**
+   * @RESEND_VERIFY_UPDATE_PASSWORD
+   * @SCHEMA VerifyUpdatePasswordType
+   * @returns
+   */
+  static async resendVerifyUpdatePassword(
+    resBody: ResenVerifyUpdatePasswordType
+  ) {
+    const existUser = await UserModel.checkExitEmail(resBody.email)
+    if (!existUser) {
+      throw new NotFoundError('Account not found')
+    }
+
+    const newVerifyToken = uuidv4()
+    const newVerifyTokenExpiredAt = expiresAtToken
+
+    const updatedUser = await UserModel.updateUserForgotPassword(
+      existUser._id as string,
+      {
+        forgot_password_token: newVerifyToken,
+        forgot_password_token_expired_at: newVerifyTokenExpiredAt,
+      }
+    )
+
+    if (!updatedUser?.email) {
+      throw new Error(
+        'User email is missing when sending reset password email.'
+      )
+    }
+
+    const resetLink = `${resBody.urlRedirect}/auth/reset-password?email=${updatedUser?.email}&token=${newVerifyToken}`
+
+    await BrevoEmailProvider.sendMail(
+      updatedUser.email,
+      'Reset your password',
+      {
+        logoUrl: INFOMAITON.LOGO_TEMPLATE_HTML_EMAIL,
+        name: INFOMAITON.USER_DEFAULT_NAME,
+        companyName: INFOMAITON.DEFAULT_NAME_PROJECT,
+        verifyLink: resetLink,
+        year: `${new Date().getFullYear()}`,
+      },
+      'src/templates/forgot-password.html'
+    )
+
+    return {
+      message: 'Reset password email has been sent.',
+    }
+  }
+  /**
+   * @REFRESH_TOKEN
+   * @SCHEMA VerifyUpdatePasswordType
+   * @returns
+   */
+  async refreshToken(clientRefreshToken: string) {
+    // === hàm này có chức năng tạo mới accessToken khi hết hạn
+    try {
+      // 1. Kiểm tra token có trong DB không
+      const storedToken = await UserModel.verifyRefreshToken(clientRefreshToken)
+      if (!storedToken) {
+        throw new UnauthorizedError('Invalid refresh token in DB')
+      }
+
+      // giải mã xem có hợp lệ hay ko
+      const refreshTokenDecoded = await jwtProvider.verifyToken(
+        clientRefreshToken,
+        ENV_CONFIG.REFRESH_TOKEN_SECRET_SIGNATURE
+      )
+
+      const userInfo = {
+        _id: refreshTokenDecoded._id,
+        email: refreshTokenDecoded.email,
+      }
+
+      const accessToken = await jwtProvider.generateToken({
+        payload: userInfo,
+        options: {
+          expiresIn: ENV_CONFIG.ACCESS_TOKEN_LIFE,
+        },
+        secretOrPrivateKey: ENV_CONFIG.ACCESS_TOKEN_SECRET_SIGNATURE,
+      })
+
+      return { accessToken }
+    } catch (error) {
+      throw new UnauthorizedError(
+        'Please sign in! ( error from refresh token )'
+      )
+    }
+  }
+}

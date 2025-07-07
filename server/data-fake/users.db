@@ -1,0 +1,4 @@
+{"username":"phong phan","email":"phongphantienq089@gmail.com","password":"$2b$12$fMibH.Z.YvBlyRjy8lUJwOIm8oSh8ByQsm0IgHOtZ2GkB/9ve/9Bi","role":"client","avatar":null,"isActive":true,"metadata":{},"createdAt":{"$$date":1751616337256},"updatedAt":{"$$date":1751621911875},"verify_token":null,"verify_token_expired_at":null,"forgot_password_token":null,"forgot_password_token_expired_at":1751622070906,"urlRedirect":"http://localhost:5173","_id":"tisgyxiARXACNX8T"}
+{"$$indexCreated":{"fieldName":"email","unique":true,"sparse":false}}
+{"$$indexCreated":{"fieldName":"username","unique":true,"sparse":false}}
+{"$$indexCreated":{"fieldName":"role","unique":false,"sparse":false}}
