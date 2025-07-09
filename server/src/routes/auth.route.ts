@@ -1,12 +1,16 @@
 import {
   forgotPasswordController,
+  getProfileController,
   loginUserController,
+  logOutController,
+  refreshTokenController,
   registerUserController,
   resendVerifyController,
   resendVerifyUpdatePasswordController,
   updatePasswordController,
   verifyAccountController,
 } from '@/controller/auth.controller'
+import { authMiddlewares } from '@/middleware/authMiddlewares'
 import { zodValidate } from '@/middleware/zodValidate'
 import { userSchema } from '@/schemas/user.schema'
 import { withErrorHandling } from '@/utils/withErrorHandling'
@@ -61,5 +65,14 @@ export const authRoute = (server: FastifyInstance) => {
         preHandler: zodValidate(userSchema.resenVerifyUpdatePassword),
       },
       withErrorHandling(resendVerifyUpdatePasswordController)
-    )
+    ),
+    server.post('/refreshToken', withErrorHandling(refreshTokenController)),
+    server.post('/logout', withErrorHandling(logOutController))
+  server.get(
+    '/getProfile',
+    {
+      preHandler: authMiddlewares,
+    },
+    withErrorHandling(getProfileController)
+  )
 }

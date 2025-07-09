@@ -1,8 +1,12 @@
-import { PrismaClient } from '@prisma/client'
+// types/fastify.d.ts
 import 'fastify'
 
 declare module 'fastify' {
-  interface FastifyInstance {
-    prisma: PrismaClient
+  interface FastifyRequest {
+    user?: {
+      _id: string
+      email: string
+      role?: string
+    }
   }
 }

@@ -1,8 +1,2 @@
-{"refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiJ0aXNneXhpQVJYQUNOWDhUIiwiZW1haWwiOiJwaG9uZ3BoYW50aWVucTA4OUBnbWFpbC5jb20iLCJpYXQiOjE3NTE2MjEyMzgsImV4cCI6MTc1MjgzMDgzOH0.0QJlEuHRRpYjz66U-7kE6rzzKnNk-AoMJVNDORfh7js","userId":"tisgyxiARXACNX8T","createdAt":{"$$date":1751621238138},"_id":"FgiQuApYphOG9NQ4"}
-{"refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiJ0aXNneXhpQVJYQUNOWDhUIiwiZW1haWwiOiJwaG9uZ3BoYW50aWVucTA4OUBnbWFpbC5jb20iLCJpYXQiOjE3NTE2MjE5NDUsImV4cCI6MTc1MjgzMTU0NX0.lwD8h8zCQxjDdOPp9WBroX_p_3-AMBXF1W3bQV2ubnE","userId":"tisgyxiARXACNX8T","createdAt":{"$$date":1751621945614},"_id":"iAQKcb8C641p2jEX"}
+{"refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiJ0aXNneXhpQVJYQUNOWDhUIiwiZW1haWwiOiJwaG9uZ3BoYW50aWVucTA4OUBnbWFpbC5jb20iLCJpYXQiOjE3NTIwMjgxMDYsImV4cCI6MTc1MjAyODQwNn0.39Lpd32gOloJa_mT9Fl9ORsAxFz8qzN2KRWuF8JC3rM","userId":"tisgyxiARXACNX8T","createdAt":{"$$date":1752028106878},"_id":"WGsEUEYS5lgggJUi"}
 {"$$indexCreated":{"fieldName":"refreshToken","unique":true,"sparse":false}}
-{"$$deleted":true,"_id":"FgiQuApYphOG9NQ4"}
-{"$$deleted":true,"_id":"iAQKcb8C641p2jEX"}
-{"refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiJ0aXNneXhpQVJYQUNOWDhUIiwiZW1haWwiOiJwaG9uZ3BoYW50aWVucTA4OUBnbWFpbC5jb20iLCJpYXQiOjE3NTE3NjM4ODEsImV4cCI6MTc1Mjk3MzQ4MX0.sttoyuft9-pms-TNkduMZ19l753q5pzsYMJIAwjmtSg","userId":"tisgyxiARXACNX8T","createdAt":{"$$date":1751763881196},"_id":"QGcYl8eFz6Jqug33"}
-{"$$deleted":true,"_id":"QGcYl8eFz6Jqug33"}
-{"refreshToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiJ0aXNneXhpQVJYQUNOWDhUIiwiZW1haWwiOiJwaG9uZ3BoYW50aWVucTA4OUBnbWFpbC5jb20iLCJpYXQiOjE3NTE3NjM4OTgsImV4cCI6MTc1Mjk3MzQ5OH0.J3alamTPtQ-pv_VXlPSG5EUfO-JIiVesXXWYoBhiwSI","userId":"tisgyxiARXACNX8T","createdAt":{"$$date":1751763898650},"_id":"XrXn5TsSONNtrQru"}

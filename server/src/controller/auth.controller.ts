@@ -75,6 +75,17 @@ export const loginUserController = async (
   return sendResponse(reply, MESSAGES.LOGIN_SUCCESS, result)
 }
 
+export const logOutController = async (
+  req: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const result = await UserService.logout(req?.cookies.refreshToken as string)
+
+  reply.clearCookie('accessToken')
+  reply.clearCookie('refreshToken')
+  return sendResponse(reply, result.message)
+}
+
 export const verifyAccountController = async (
   request: FastifyRequest<VerifyAccountUserRoute>,
   reply: FastifyReply
@@ -118,4 +129,32 @@ export const resendVerifyUpdatePasswordController = async (
   const result = await UserService.resendVerifyUpdatePassword(request.body)
 
   return sendResponse(reply, result.message)
+}
+
+export const refreshTokenController = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const result = await UserService.refreshToken(
+    request.cookies?.refreshToken as string
+  )
+
+  reply.cookie('accessToken', result.accessToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: ms('14 days'),
+  })
+  return sendResponse(reply, result.accessToken)
+}
+
+export const getProfileController = async (
+  req: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const userId = (req.user as { _id: string })._id
+
+  const user = await UserService.getProfile(userId)
+
+  return sendResponse(reply, 'GET PROFILE SUCCESS', pickUser(user))
 }

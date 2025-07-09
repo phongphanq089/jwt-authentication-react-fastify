@@ -1,6 +1,7 @@
 import { database } from '@/config/dbFakeConfig'
 import { refreshTokenSchema } from '@/schemas/refreshToken.schema'
 import { UserRegisterSchemaType } from '@/schemas/user.schema'
+import { AppError } from '@/utils/errors'
 
 export class UserModel {
   static async findByEmailOrUsername(email: string, username: string) {
@@ -38,11 +39,20 @@ export class UserModel {
   }
 
   static async verifyRefreshToken(token: string) {
-    const tokenData = await database.refreshTokens.findOne({ token })
+    const tokenData = await database.refreshTokens.findOne({
+      refreshToken: token,
+    })
     if (!tokenData) {
-      throw new Error('Refresh token not found or invalid')
+      throw new AppError('Refresh token not found or invalid')
     }
     return tokenData
+  }
+
+  static async removeRefreshToken(token: string) {
+    return await database.refreshTokens.remove(
+      { refreshToken: token },
+      { multi: false }
+    )
   }
 
   static async updateUserVerifyStatus(
@@ -89,5 +99,11 @@ export class UserModel {
     )
 
     return await database.users.findOne({ _id: userId })
+  }
+
+  static async findUserById(userId: string) {
+    const user = await database.users.findOne({ _id: userId })
+
+    return user
   }
 }

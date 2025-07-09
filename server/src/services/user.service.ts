@@ -138,6 +138,21 @@ export class UserService {
     return result
   }
   /**
+   * @LOGOUT
+   * @returns
+   */
+  static async logout(clientRefreshToken: string) {
+    const storedToken = await UserModel.verifyRefreshToken(clientRefreshToken)
+
+    if (!storedToken) {
+      throw new UnauthorizedError('Invalid or expired refresh token')
+    }
+
+    await UserModel.removeRefreshToken(clientRefreshToken)
+
+    return { message: 'Logout successful' }
+  }
+  /**
    * @VERIFY_ACCOUNT
    * @SCHEMA VerifyAccountSchemaType
    * @returns
@@ -354,16 +369,17 @@ export class UserService {
    * @SCHEMA VerifyUpdatePasswordType
    * @returns
    */
-  async refreshToken(clientRefreshToken: string) {
+  static async refreshToken(clientRefreshToken: string) {
     // === hàm này có chức năng tạo mới accessToken khi hết hạn
     try {
       // 1. Kiểm tra token có trong DB không
       const storedToken = await UserModel.verifyRefreshToken(clientRefreshToken)
+
       if (!storedToken) {
         throw new UnauthorizedError('Invalid refresh token in DB')
       }
 
-      // giải mã xem có hợp lệ hay ko
+      // giải mã xem có hợp lệ hay ko , nếu token hết hạn thì jwt tự động trả lỗi sẽ chạy vào catch error
       const refreshTokenDecoded = await jwtProvider.verifyToken(
         clientRefreshToken,
         ENV_CONFIG.REFRESH_TOKEN_SECRET_SIGNATURE
@@ -383,10 +399,29 @@ export class UserService {
       })
 
       return { accessToken }
-    } catch (error) {
+    } catch (error: any) {
+      // kiểm tra nếu lỗi token hết hạn thì cho vào trong này
+      if (error?.message?.includes('jwt expired')) {
+        throw new UnauthorizedError('Refresh token expired')
+      }
+
+      // ngược lại nếu ko phải lỗi token lỗi khác thì ném vào đây
       throw new UnauthorizedError(
         'Please sign in! ( error from refresh token )'
       )
     }
+  }
+  /**
+   * @GET_USER_PROFILE
+   * @returns
+   */
+  static async getProfile(userId: string) {
+    const user = await UserModel.findUserById(userId)
+
+    if (!user) {
+      throw new NotFoundError('User not found')
+    }
+
+    return user
   }
 }
