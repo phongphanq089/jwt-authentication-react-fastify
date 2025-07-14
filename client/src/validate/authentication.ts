@@ -23,22 +23,11 @@ const redirectUrlSchema = z
 
 export class userSchema {
   public static userRegisterSchema = z.object({
-    _id: z.string().optional(),
-
     username: z
       .string()
       .min(3, 'Username must be at least 3 characters long')
       .max(30, 'Username cannot exceed 30 characters'),
-
     email: z.string().email('Please enter valid email address'),
-
-    avatar: z
-      .string()
-      .url({ message: 'Avatar must be a valid URL.' })
-      .nullable()
-      .optional()
-      .default(null),
-
     password: z
       .string()
       .min(8, { message: 'Password must be at least 8 characters long' })
@@ -46,38 +35,6 @@ export class userSchema {
         message:
           'Password must include at least one number or special character',
       }),
-
-    role: z
-      .enum(['admin', 'client'], {
-        message: `'Role must be either "admin" or "client".'`,
-      })
-      .nullable()
-      .optional()
-      .default('client'),
-
-    isActive: z.boolean().nullable().optional().default(false),
-    verify_token: z.string().nullable().optional().default(null),
-    verify_token_expired_at: z.number().nullable().optional().default(null),
-    forgot_password_token: z.string().nullable().optional().default(null),
-    forgot_password_token_expired_at: z
-      .number()
-      .nullable()
-      .optional()
-      .default(null),
-    metadata: z.record(z.any()).optional(),
-    createdAt: z
-      .union([z.string(), z.date()])
-      .transform((val) => new Date(val))
-      .optional(),
-    updatedAt: z
-      .union([z.string(), z.date()])
-      .transform((val) => new Date(val))
-      .optional(),
-    lastLogin: z
-      .union([z.string(), z.date()])
-      .transform((val) => (val ? new Date(val) : undefined))
-      .optional(),
-    urlRedirect: redirectUrlSchema,
   })
   public static userLoginSchema = z.object({
     email: z.string().email({
@@ -161,6 +118,7 @@ export class userSchema {
 export type UserRegisterSchemaType = z.infer<
   typeof userSchema.userRegisterSchema
 >
+
 export type UserLoginSchemaType = z.infer<typeof userSchema.userLoginSchema>
 
 export type VerifyAccountSchemaType = z.infer<typeof userSchema.verifyAccount>
@@ -174,7 +132,6 @@ export type UpdatePasswordType = z.infer<typeof userSchema.updatePassword>
 export type ResenVerifyUpdatePasswordType = z.infer<
   typeof userSchema.resenVerifyUpdatePassword
 >
-
 export type UpdateProfileType = z.infer<typeof userSchema.updateProfileSchema>
 
 export type ChangePasswordType = z.infer<typeof userSchema.changePasswordSchema>
