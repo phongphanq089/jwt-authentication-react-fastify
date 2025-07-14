@@ -129,6 +129,33 @@ export class userSchema {
     }),
     urlRedirect: redirectUrlSchema,
   })
+  public static updateProfileSchema = z.object({
+    username: z
+      .string()
+      .min(3, 'Username must be at least 3 characters')
+      .max(30, 'Username cannot exceed 30 characters')
+      .optional(),
+    avatar: z
+      .string()
+      .url({ message: 'Avatar must be a valid URL' })
+      .nullable()
+      .optional(),
+  })
+
+  public static changePasswordSchema = z.object({
+    oldPassword: z.string().min(8, 'Old password is required'),
+    newPassword: z
+      .string()
+      .min(8, 'New password must be at least 8 characters')
+      .refine((val) => /[0-9!@#$%^&*]/.test(val), {
+        message:
+          'New password must contain at least one number or special character',
+      }),
+  })
+  public static changeEmailSchema = z.object({
+    newEmail: z.string().email('New email must be valid'),
+    urlRedirect: z.string().url(),
+  })
 }
 
 export type UserRegisterSchemaType = z.infer<
@@ -148,3 +175,9 @@ export type UpdatePasswordType = z.infer<typeof userSchema.updatePassword>
 export type ResenVerifyUpdatePasswordType = z.infer<
   typeof userSchema.resenVerifyUpdatePassword
 >
+
+export type UpdateProfileType = z.infer<typeof userSchema.updateProfileSchema>
+
+export type ChangePasswordType = z.infer<typeof userSchema.changePasswordSchema>
+
+export type ChangeEmailType = z.infer<typeof userSchema.changeEmailSchema>

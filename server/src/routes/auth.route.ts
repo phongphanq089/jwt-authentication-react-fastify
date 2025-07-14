@@ -1,4 +1,6 @@
 import {
+  changeEmailController,
+  changePasswordController,
   forgotPasswordController,
   getProfileController,
   loginUserController,
@@ -8,6 +10,7 @@ import {
   resendVerifyController,
   resendVerifyUpdatePasswordController,
   updatePasswordController,
+  updateProfileController,
   verifyAccountController,
 } from '@/controller/auth.controller'
 import { authMiddlewares } from '@/middleware/authMiddlewares'
@@ -74,5 +77,33 @@ export const authRoute = (server: FastifyInstance) => {
       preHandler: authMiddlewares,
     },
     withErrorHandling(getProfileController)
-  )
+  ),
+    server.put(
+      '/updateProfile',
+      {
+        preHandler: authMiddlewares,
+      },
+      withErrorHandling(updateProfileController)
+    ),
+    server.put(
+      '/change-password',
+      {
+        preHandler: authMiddlewares,
+      },
+      withErrorHandling(changePasswordController)
+    )
+  server.put(
+    '/change-email',
+    {
+      preHandler: [authMiddlewares],
+    },
+    withErrorHandling(changeEmailController)
+  ),
+    server.post(
+      '/confirm-change-email',
+      {
+        preHandler: [authMiddlewares],
+      },
+      withErrorHandling(changeEmailController)
+    )
 }

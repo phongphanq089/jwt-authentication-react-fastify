@@ -2,10 +2,13 @@ import { ENV_CONFIG } from '@/config/envConfig'
 import { INFOMAITON } from '@/contants/infomation'
 import { BrevoEmailProvider } from '@/provider/brevoEmailProvider'
 import {
+  ChangeEmailType,
+  ChangePasswordType,
   ForgotPasswordType,
   ResenVerifyType,
   ResenVerifyUpdatePasswordType,
   UpdatePasswordType,
+  UpdateProfileType,
   UserLoginSchemaType,
   UserRegisterSchemaType,
   VerifyAccountSchemaType,
@@ -423,5 +426,92 @@ export class UserService {
     }
 
     return user
+  }
+  /**
+   * @UPDATE_PROFILE
+   * @returns
+   */
+  static async updateProfile(userId: string, data: Partial<UpdateProfileType>) {
+    const user = await UserModel.findUserById(userId)
+
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    const updatedUser = await UserModel.updateUserProfile(
+      userId,
+      data as Partial<Pick<UserRegisterSchemaType, 'username' | 'avatar'>>
+    )
+
+    return updatedUser
+  }
+  /**
+   * @CHANGE_PASSWORD
+   * @returns
+   */
+  static async changePassword(userId: string, data: ChangePasswordType) {
+    const user = await UserModel.findUserById(userId)
+    if (!user) throw new NotFoundError('User not found')
+
+    const isMatch = await bcrypt.compare(data.oldPassword, user.password)
+    if (!isMatch) throw new UnauthorizedError('Old password is incorrect')
+
+    const hashedNewPassword = await bcrypt.hash(data.newPassword, 12)
+
+    await UserModel.updateUserForgotPassword(userId, {
+      password: hashedNewPassword,
+    })
+
+    return { message: 'Password updated successfully' }
+  }
+  /**
+   * @CHANGE_EMAIL
+   * @return
+   */
+  static async changeEmail(userId: string, data: ChangeEmailType) {
+    const user = await UserModel.findUserById(userId)
+    if (!user) throw new NotFoundError('User not found')
+
+    const isTaken = await UserModel.checkExitEmail(data.newEmail)
+    if (isTaken) throw new ConflictError('Email already in use')
+
+    const verifyToken = uuidv4()
+    const tokenExpiry = Date.now() + 15 * 60 * 1000
+
+    await UserModel.updateUserVerifyStatus(userId, {
+      verify_token: verifyToken,
+      verify_token_expired_at: tokenExpiry,
+    })
+
+    await BrevoEmailProvider.sendMail(
+      data.newEmail,
+      'Verify your new email address',
+      {
+        logoUrl: INFOMAITON.LOGO_TEMPLATE_HTML_EMAIL,
+        name: INFOMAITON.USER_DEFAULT_NAME,
+        companyName: INFOMAITON.DEFAULT_NAME_PROJECT,
+        verifyLink: `${data.urlRedirect}?email=${data.newEmail}&token=${verifyToken}`,
+        year: `${new Date().getFullYear()}`,
+      },
+      'src/templates/template-mail.html'
+    )
+
+    return { message: 'Please verify your new email address via email link.' }
+  }
+  static async confirmChangeEmail(email: string, token: string) {
+    const user = await UserModel.checkExitEmail(email)
+    if (!user) throw new NotFoundError('User not found')
+    if (user.verify_token !== token) throw new ForbiddenError('Invalid token')
+    if (Date.now() > (user.verify_token_expired_at || 0)) {
+      throw new ForbiddenError('Token expired')
+    }
+
+    const updated = await UserModel.updateUserVerifyStatus(user._id as string, {
+      email,
+      verify_token: null,
+      verify_token_expired_at: null,
+    })
+
+    return pickUser(updated)
   }
 }

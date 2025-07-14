@@ -60,7 +60,7 @@ export class UserModel {
     updateData: Partial<
       Pick<
         UserRegisterSchemaType,
-        'isActive' | 'verify_token' | 'verify_token_expired_at'
+        'email' | 'isActive' | 'verify_token' | 'verify_token_expired_at'
       >
     >
   ) {
@@ -105,5 +105,21 @@ export class UserModel {
     const user = await database.users.findOne({ _id: userId })
 
     return user
+  }
+  static async updateUserProfile(
+    userId: string,
+    updateData: Partial<Pick<UserRegisterSchemaType, 'username' | 'avatar'>>
+  ) {
+    await database.users.update(
+      { _id: userId },
+      {
+        $set: {
+          ...updateData,
+          updatedAt: new Date(),
+        },
+      }
+    )
+
+    return await database.users.findOne({ _id: userId })
   }
 }

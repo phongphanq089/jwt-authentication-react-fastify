@@ -1,9 +1,12 @@
 import { MESSAGES } from '@/contants/message'
 import {
+  ChangeEmailType,
+  ChangePasswordType,
   ForgotPasswordType,
   ResenVerifyType,
   ResenVerifyUpdatePasswordType,
   UpdatePasswordType,
+  UpdateProfileType,
   UserLoginSchemaType,
   UserRegisterSchemaType,
   VerifyAccountSchemaType,
@@ -19,30 +22,6 @@ interface RegisterUserRoute extends RouteGenericInterface {
   Body: UserRegisterSchemaType
 }
 
-interface LoginUserRoute extends RouteGenericInterface {
-  Body: UserLoginSchemaType
-}
-
-interface VerifyAccountUserRoute extends RouteGenericInterface {
-  Body: VerifyAccountSchemaType
-}
-
-interface ResenVerifyTypeUserRoute extends RouteGenericInterface {
-  Body: ResenVerifyType
-}
-
-interface ForgotPasswordTypeUserRoute extends RouteGenericInterface {
-  Body: ForgotPasswordType
-}
-
-interface UpdatePasswordTypeUserRoute extends RouteGenericInterface {
-  Body: UpdatePasswordType
-}
-
-interface resenVerifyUpdatePasswordTypeUserRoute extends RouteGenericInterface {
-  Body: ResenVerifyUpdatePasswordType
-}
-
 export const registerUserController = async (
   request: FastifyRequest<RegisterUserRoute>,
   reply: FastifyReply
@@ -52,6 +31,9 @@ export const registerUserController = async (
   return sendResponse(reply, MESSAGES.REGISTER_SUCCESS, pickUser(result))
 }
 
+interface LoginUserRoute extends RouteGenericInterface {
+  Body: UserLoginSchemaType
+}
 export const loginUserController = async (
   request: FastifyRequest<LoginUserRoute>,
   reply: FastifyReply
@@ -86,6 +68,10 @@ export const logOutController = async (
   return sendResponse(reply, result.message)
 }
 
+interface VerifyAccountUserRoute extends RouteGenericInterface {
+  Body: VerifyAccountSchemaType
+}
+
 export const verifyAccountController = async (
   request: FastifyRequest<VerifyAccountUserRoute>,
   reply: FastifyReply
@@ -93,6 +79,10 @@ export const verifyAccountController = async (
   const result = await UserService.verifyAccount(request.body)
 
   return sendResponse(reply, MESSAGES.VERIFY_SUCCESS, pickUser(result))
+}
+
+interface ResenVerifyTypeUserRoute extends RouteGenericInterface {
+  Body: ResenVerifyType
 }
 
 export const resendVerifyController = async (
@@ -104,6 +94,10 @@ export const resendVerifyController = async (
   return sendResponse(reply, result.message)
 }
 
+interface ForgotPasswordTypeUserRoute extends RouteGenericInterface {
+  Body: ForgotPasswordType
+}
+
 export const forgotPasswordController = async (
   request: FastifyRequest<ForgotPasswordTypeUserRoute>,
   reply: FastifyReply
@@ -113,6 +107,10 @@ export const forgotPasswordController = async (
   return sendResponse(reply, result.message)
 }
 
+interface UpdatePasswordTypeUserRoute extends RouteGenericInterface {
+  Body: UpdatePasswordType
+}
+
 export const updatePasswordController = async (
   request: FastifyRequest<UpdatePasswordTypeUserRoute>,
   reply: FastifyReply
@@ -120,6 +118,10 @@ export const updatePasswordController = async (
   const result = await UserService.updatePassword(request.body)
 
   return sendResponse(reply, result.message)
+}
+
+interface resenVerifyUpdatePasswordTypeUserRoute extends RouteGenericInterface {
+  Body: ResenVerifyUpdatePasswordType
 }
 
 export const resendVerifyUpdatePasswordController = async (
@@ -157,4 +159,67 @@ export const getProfileController = async (
   const user = await UserService.getProfile(userId)
 
   return sendResponse(reply, 'GET PROFILE SUCCESS', pickUser(user))
+}
+
+interface updateProfileTypeRoute extends RouteGenericInterface {
+  Body: UpdateProfileType
+}
+
+export const updateProfileController = async (
+  request: FastifyRequest<updateProfileTypeRoute>,
+  reply: FastifyReply
+) => {
+  const userId = (request.user as { _id: string })._id
+
+  const updatedUser = await UserService.updateProfile(userId, request.body)
+
+  return sendResponse(reply, 'UPDATE PROFILE SUCCESS', pickUser(updatedUser))
+}
+
+interface changePasswordTypeRoute extends RouteGenericInterface {
+  Body: ChangePasswordType
+}
+
+export const changePasswordController = async (
+  request: FastifyRequest<changePasswordTypeRoute>,
+  reply: FastifyReply
+) => {
+  const userId = (request.user as { _id: string })._id
+
+  const result = await UserService.changePassword(userId, request.body)
+
+  return sendResponse(reply, 'Update Password success', result)
+}
+
+interface changeEmailTypeTypeRoute extends RouteGenericInterface {
+  Body: ChangeEmailType
+}
+
+export const changeEmailController = async (
+  request: FastifyRequest<changeEmailTypeTypeRoute>,
+  reply: FastifyReply
+) => {
+  const userId = (request.user as { _id: string })._id
+  const result = await UserService.changeEmail(userId, request.body)
+
+  return sendResponse(reply, 'Send Email success', result)
+}
+
+interface confirmEmailTypeTypeRoute extends RouteGenericInterface {
+  Body: {
+    email: string
+    token: string
+  }
+}
+
+export const ConfirmEmailController = async (
+  request: FastifyRequest<confirmEmailTypeTypeRoute>,
+  reply: FastifyReply
+) => {
+  const result = await UserService.confirmChangeEmail(
+    request.body.email,
+    request.body.token
+  )
+
+  return sendResponse(reply, 'Update Email success', result)
 }
