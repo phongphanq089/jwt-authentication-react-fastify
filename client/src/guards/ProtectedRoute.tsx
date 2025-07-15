@@ -10,11 +10,17 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, requireRole }: ProtectedRouteProps) => {
   const { isAuthenticated, user } = useAuthStore()
 
+  const userRole = 'admin'
+
   if (!isAuthenticated && !user) {
-    return <Navigate to={'/login'} replace /> // replace có tác dụng xoá đi lịch sử route
+    return <Navigate to={'/login'} replace />
   }
 
-  if (requireRole && user?.role !== requireRole) {
+  // if (requireRole && user?.role !== requireRole) {
+  //   return <Navigate to='/unauthorized' replace />
+  // }
+
+  if (requireRole && userRole !== requireRole) {
     return <Navigate to='/unauthorized' replace />
   }
 

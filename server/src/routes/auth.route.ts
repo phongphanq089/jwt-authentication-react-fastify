@@ -1,6 +1,7 @@
 import {
   changeEmailController,
   changePasswordController,
+  ConfirmEmailController,
   forgotPasswordController,
   getProfileController,
   loginUserController,
@@ -101,9 +102,7 @@ export const authRoute = (server: FastifyInstance) => {
   ),
     server.post(
       '/confirm-change-email',
-      {
-        preHandler: [authMiddlewares],
-      },
-      withErrorHandling(changeEmailController)
+
+      withErrorHandling(ConfirmEmailController)
     )
 }

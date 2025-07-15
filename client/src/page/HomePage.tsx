@@ -3,14 +3,15 @@ import { Button } from '~/components/ui/button'
 import { useAuthStore } from '~/stores/useAuthStore'
 
 const HomePage = () => {
-  const navigation = useNavigate()
+  const navigate = useNavigate()
 
   const { isAuthenticated, user } = useAuthStore()
   const handleNavigation = () => {
     if (isAuthenticated && user) {
-      navigation('/admin')
+      navigate('/admin')
+    } else {
+      navigate('/login')
     }
-    navigation('/login')
   }
   return (
     <div className='h-screen flex items-center justify-center '>

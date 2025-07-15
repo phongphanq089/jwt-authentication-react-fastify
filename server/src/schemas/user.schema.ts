@@ -31,6 +31,7 @@ export class userSchema {
       .max(30, 'Username cannot exceed 30 characters'),
 
     email: z.string().email('Please enter valid email address'),
+    temp_email: z.string().email().nullable().optional().default(null),
 
     avatar: z
       .string()

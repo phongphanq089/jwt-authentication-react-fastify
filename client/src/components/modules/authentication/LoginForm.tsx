@@ -6,7 +6,12 @@ import { Card, CardContent } from '~/components/ui/card'
 import { userSchema, type UserLoginSchemaType } from '~/validate/authentication'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
+import { useLogin } from '~/hooks/api/auth'
+import { toast } from 'react-toastify'
+import { useEffect } from 'react'
+import { useAuthStore } from '~/stores/useAuthStore'
+import LoadingButton from '~/components/shared/LoadingButton'
 
 export function LoginForm({
   className,
@@ -20,9 +25,24 @@ export function LoginForm({
     resolver: zodResolver(userSchema.userLoginSchema),
   })
 
-  const onSubmitData = (payload: UserLoginSchemaType) => {
-    console.log(payload, '=========>')
+  const navigate = useNavigate()
+
+  const { login } = useAuthStore()
+
+  const { mutate: loginData, error, isPending } = useLogin()
+
+  const onSubmitData = async (payload: UserLoginSchemaType) => {
+    loginData(payload, {
+      onSuccess: (data) => {
+        login(data.result)
+        toast.success(data.message)
+        navigate('/admin')
+      },
+    })
   }
+  useEffect(() => {
+    if (error) toast.error(error.message)
+  }, [error])
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
@@ -52,12 +72,12 @@ export function LoginForm({
               <div className='grid gap-3'>
                 <div className='flex items-center'>
                   <Label htmlFor='password'>Password</Label>
-                  <a
-                    href='#'
+                  <Link
+                    to='/forgot-password'
                     className='ml-auto text-sm underline-offset-2 hover:underline'
                   >
                     Forgot your password?
-                  </a>
+                  </Link>
                 </div>
                 <Input {...register('password')} type='password' />
                 {errors.password && (
@@ -66,9 +86,15 @@ export function LoginForm({
                   </p>
                 )}
               </div>
-              <Button type='submit' className='w-full'>
+
+              <LoadingButton
+                loading={isPending}
+                type='submit'
+                className='w-full'
+              >
                 Login
-              </Button>
+              </LoadingButton>
+
               <div className='after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t'>
                 <span className='bg-card text-muted-foreground relative z-10 px-2'>
                   Or continue with

@@ -1,5 +1,4 @@
-{"username":"phong phan","email":"phongphantienq089@gmail.com","password":"$2b$12$fMibH.Z.YvBlyRjy8lUJwOIm8oSh8ByQsm0IgHOtZ2GkB/9ve/9Bi","role":"client","avatar":null,"isActive":true,"metadata":{},"createdAt":{"$$date":1751616337256},"updatedAt":{"$$date":1752026127606},"verify_token":null,"verify_token_expired_at":null,"forgot_password_token":"76ea1c8a-6ac7-492a-a5d9-5e96470c59ca","forgot_password_token_expired_at":1752026374196,"urlRedirect":"http://localhost:5173","_id":"tisgyxiARXACNX8T"}
+{"username":"phongphanq089","email":"phongphanq089@gmail.com","password":"$2b$12$iSOYz6xzXd3w3QrKpD.hoe.sg9.4lLiLpWxH/0IctCRy28NvT7hqW","role":"client","avatar":null,"isActive":true,"metadata":{},"createdAt":{"$$date":1752551733016},"updatedAt":{"$$date":1752566912296},"verify_token":null,"verify_token_expired_at":null,"forgot_password_token":null,"forgot_password_token_expired_at":1752563029866,"urlRedirect":"http://localhost:5173/verify-email","_id":"Q7C4PQDbcsO5HbQH","temp_email":null}
 {"$$indexCreated":{"fieldName":"email","unique":true,"sparse":false}}
 {"$$indexCreated":{"fieldName":"username","unique":true,"sparse":false}}
 {"$$indexCreated":{"fieldName":"role","unique":false,"sparse":false}}
-{"$$indexCreated":{"fieldName":"email","unique":true}}

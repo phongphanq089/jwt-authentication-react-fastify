@@ -15,6 +15,7 @@ import {
 } from '@/schemas/user.schema'
 
 import {
+  AppError,
   ConflictError,
   ForbiddenError,
   NotFoundError,
@@ -26,6 +27,7 @@ import { UserModel } from '@/models/users.model'
 import { jwtProvider } from '@/provider/jwtProvider'
 import { pickUser } from '@/utils/pickUser'
 import { expiresAtToken } from '@/utils/utils'
+import { database } from '@/config/dbFakeConfig'
 
 export class UserService {
   /**
@@ -59,6 +61,7 @@ export class UserService {
     const user: Omit<UserRegisterSchemaType, '_id'> = {
       username,
       email,
+      temp_email: null,
       password: hashedPassword,
       role: 'client',
       avatar: null,
@@ -73,21 +76,27 @@ export class UserService {
       urlRedirect: urlRedirect,
     }
 
-    const newUser = await UserModel.insert(user)
+    let newUser
 
-    await BrevoEmailProvider.sendMail(
-      newUser.email,
-      'Verify your email',
-      {
-        logoUrl: INFOMAITON.LOGO_TEMPLATE_HTML_EMAIL,
-        name: INFOMAITON.USER_DEFAULT_NAME,
-        companyName: INFOMAITON.DEFAULT_NAME_PROJECT,
-        verifyLink: `${urlRedirect}/auth/verify-email?email=${user.email}&token=${newUser.verify_token}`,
-        year: `${new Date().getFullYear()}`,
-      },
-      'src/templates/template-mail.html'
-    )
-
+    // ======= hiện tại các chỗ khác mình đang gọi   await BrevoEmailProvider chứ ko try catch  như này , có thể bổ xung thêm để trường hợp mail server lỗi nhưng nó ko trả về lỗi mà nó pass qua luôn
+    // ======   currently the other pages I'm calling are waiting for BrevoEmailProvider and not trying to catch like this, could add around the mail server error case but it doesn't return an error it always passes
+    try {
+      newUser = await UserModel.insert(user)
+      await BrevoEmailProvider.sendMail(
+        newUser.email,
+        'Verify your email',
+        {
+          logoUrl: INFOMAITON.LOGO_TEMPLATE_HTML_EMAIL,
+          name: INFOMAITON.USER_DEFAULT_NAME,
+          companyName: INFOMAITON.DEFAULT_NAME_PROJECT,
+          verifyLink: `${urlRedirect}?email=${user.email}&token=${newUser.verify_token}`,
+          year: `${new Date().getFullYear()}`,
+        },
+        'src/templates/template-mail.html'
+      )
+    } catch (error) {
+      throw new AppError(`SERVER ERROR : ${error}`, 500)
+    }
     return newUser
   }
   /**
@@ -167,7 +176,7 @@ export class UserService {
     }
 
     if (existUser.isActive) {
-      throw new ForbiddenError('Your account is already active!')
+      return pickUser(existUser)
     }
 
     if (userData.token !== existUser.verify_token) {
@@ -225,7 +234,7 @@ export class UserService {
         logoUrl: INFOMAITON.LOGO_TEMPLATE_HTML_EMAIL,
         name: INFOMAITON.USER_DEFAULT_NAME,
         companyName: INFOMAITON.DEFAULT_NAME_PROJECT,
-        verifyLink: `${resBody.urlRedirect}/auth/verify-email?email=${resBody.email}&token=${updatedUser?.verify_token}`,
+        verifyLink: `${resBody.urlRedirect}?email=${resBody.email}&token=${updatedUser?.verify_token}`,
         year: `${new Date().getFullYear()}`,
       },
       'src/templates/template-mail.html'
@@ -257,7 +266,7 @@ export class UserService {
       }
     )
 
-    const resetLink = `${resBody.urlRedirect}/auth/reset-password?email=${updatedUser?.email}&token=${VerifyToken}`
+    const resetLink = `${resBody.urlRedirect}?email=${updatedUser?.email}&token=${VerifyToken}`
 
     if (!updatedUser?.email) {
       throw new Error(
@@ -348,7 +357,7 @@ export class UserService {
       )
     }
 
-    const resetLink = `${resBody.urlRedirect}/auth/reset-password?email=${updatedUser?.email}&token=${newVerifyToken}`
+    const resetLink = `${resBody.urlRedirect}?email=${updatedUser?.email}&token=${newVerifyToken}`
 
     await BrevoEmailProvider.sendMail(
       updatedUser.email,
@@ -481,6 +490,7 @@ export class UserService {
     await UserModel.updateUserVerifyStatus(userId, {
       verify_token: verifyToken,
       verify_token_expired_at: tokenExpiry,
+      temp_email: data.newEmail,
     })
 
     await BrevoEmailProvider.sendMail(
@@ -499,19 +509,41 @@ export class UserService {
     return { message: 'Please verify your new email address via email link.' }
   }
   static async confirmChangeEmail(email: string, token: string) {
-    const user = await UserModel.checkExitEmail(email)
-    if (!user) throw new NotFoundError('User not found')
-    if (user.verify_token !== token) throw new ForbiddenError('Invalid token')
-    if (Date.now() > (user.verify_token_expired_at || 0)) {
-      throw new ForbiddenError('Token expired')
+    // hiện tại đang  dùng nedb-promises fake  nên ko thể query kiểu callback được nên bắt buộc phải check kiểu này
+    // Bước 1: Tìm user theo token
+    let user = await database.users.findOne({ verify_token: token })
+
+    // ✅ Nếu tìm thấy user theo token
+    if (user) {
+      if (user.verify_token !== token) throw new ForbiddenError('Invalid token')
+      if (Date.now() > (user.verify_token_expired_at || 0)) {
+        throw new ForbiddenError('Token expired')
+      }
+
+      // Cập nhật email
+      const updated = await UserModel.updateUserVerifyStatus(
+        user._id as string,
+        {
+          email: user.temp_email as string,
+          temp_email: null,
+          verify_token: null,
+          verify_token_expired_at: null,
+        }
+      )
+
+      return pickUser(updated)
     }
 
-    const updated = await UserModel.updateUserVerifyStatus(user._id as string, {
-      email,
-      verify_token: null,
-      verify_token_expired_at: null,
-    })
+    // ❗ Bước 2: Nếu token không còn (người dùng đã xác nhận rồi)
+    // → Thử tìm theo email để biết có phải đã xác thực rồi không
+    user = await database.users.findOne({ email })
 
-    return pickUser(updated)
+    if (user && !user.verify_token && !user.temp_email) {
+      // ✅ Đã xác nhận trước đó → idempotent OK
+      return pickUser(user)
+    }
+
+    // ❌ Nếu không tìm thấy, báo lỗi
+    throw new NotFoundError('User not found or already verified')
   }
 }

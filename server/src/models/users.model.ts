@@ -60,7 +60,11 @@ export class UserModel {
     updateData: Partial<
       Pick<
         UserRegisterSchemaType,
-        'email' | 'isActive' | 'verify_token' | 'verify_token_expired_at'
+        | 'email'
+        | 'isActive'
+        | 'verify_token'
+        | 'verify_token_expired_at'
+        | 'temp_email'
       >
     >
   ) {

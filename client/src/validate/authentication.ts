@@ -71,7 +71,7 @@ export class userSchema {
     email: z.string().email({
       message: 'Please enter valid email address',
     }),
-    token: z.string().nullable().optional().default(null),
+    token: z.string().optional(),
     password: z
       .string()
       .min(8, { message: 'Password must be at least 8 characters long' })
@@ -113,6 +113,12 @@ export class userSchema {
     newEmail: z.string().email('New email must be valid'),
     urlRedirect: z.string().url(),
   })
+  public static verifyConfirmNewEmail = z.object({
+    email: z.string().email({
+      message: 'Please enter valid email address',
+    }),
+    token: z.string().nullable().optional().default(null),
+  })
 }
 
 export type UserRegisterSchemaType = z.infer<
@@ -137,3 +143,7 @@ export type UpdateProfileType = z.infer<typeof userSchema.updateProfileSchema>
 export type ChangePasswordType = z.infer<typeof userSchema.changePasswordSchema>
 
 export type ChangeEmailType = z.infer<typeof userSchema.changeEmailSchema>
+
+export type VerifyConfirmNewEmailType = z.infer<
+  typeof userSchema.verifyConfirmNewEmail
+>
